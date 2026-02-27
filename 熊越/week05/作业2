@@ -1,0 +1,10 @@
+作业2（400字文档， 流程图）: 如何使用bert 进行文本编码，并且使用bert 进行相似度计算，需要写清楚技术方案；
+
+总纲：使用sbert，原因：sbert专为句子语义相似度匹配而生，通过余弦相似度进行计算匹配，余弦相似度不计算长度只计算方向。
+sbert代码逻辑拆解
+1.Auto.from_pretrained加载模型
+2.toekenizer.from_pretrained加载预训练好的分词表
+3.用户输入词embedding_input，通过分词后在no_grad：中传入模型(**input)，**input是inpu_ids、attention_mask、labels，
+4.得到的返回结果model_ouput与embedding_input传入mean_pooling中，得到一个平均维度，去除填充值，真实token维度数除以真实token数
+5.通过余弦计算方法similarity传入用户输入值和待匹配的词向量，得到具体结果
+6.余弦计算方法similarity拆解：1).余弦相似度判断是通过长度而不是通过举例，所以这里能最大限度去除长短语义匹配维度长度不匹配问题影响 2).余弦计算方法底层是通过L2归一化判断，即通过x**2,x1**2得到平方后开根得到模长，通过(Xn/模长)**2得到最后归一化计算结果，所谓归一化指通过公式相加最后和为1
