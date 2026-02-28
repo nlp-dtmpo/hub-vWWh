@@ -1,114 +1,209 @@
 import pandas as pd
-import torch
-from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
-from sklearn.preprocessing import LabelEncoder
-from datasets import Dataset
 import numpy as np
+import torch
+import torch.nn.functional as F
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset, DataLoader
+from transformers import BertTokenizer, BertForSequenceClassification
+from torch.optim import AdamW
 
-# 加载和预处理数据
-dataset_df = pd.read_csv(
-    "Simplified_Chinese_Multi-Emotion_Dialogue_Dataset.csv", 
-    sep=",",
-    # nrows=1000 # 只读取前1000行数据
-)
+# 1. 设备
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"使用设备: {device}")
 
-# 初始化 LabelEncoder，用于将文本标签转换为数字标签
+# 2. 读取数据
+data_df = pd.read_csv('Simplified_Chinese_Multi-Emotion_Dialogue_Dataset.csv', sep=',')
+texts = data_df['text'].astype(str).tolist()
+
 lbl = LabelEncoder()
-# 拟合数据并转换标签，得到数字标签
-labels = lbl.fit_transform(dataset_df['label'].values)
-# 提取文本内容
-texts = list(dataset_df['text'].values)
+labels = lbl.fit_transform(data_df['label'])
 
-for idx, label in enumerate(lbl.classes_):
-    print(f"{label:<8} → {idx}")
+print("类别标签:", lbl.classes_)
 
-
-# 分割数据为训练集和测试集
-x_train, x_test, train_labels, test_labels = train_test_split(
-    texts,             # 文本数据
-    labels,            # 对应的数字标签
-    test_size=0.2,     # 测试集比例为20%
-    stratify=labels    # 确保训练集和测试集的标签分布一致
+# 3. 数据划分
+x_train, x_test, y_train, y_test = train_test_split(
+    texts,
+    labels,
+    test_size=0.2,      # 20%作为测试集
+    stratify=labels,    # 按标签比例分层抽样
+    random_state=42     # 随机种子，保证可重复性
 )
 
-# 从预训练模型加载分词器和模型
+# 4. 定义dataset
+class ClassifyDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_len=40):
+        # 初始化：保存文本、标签、分词器和最大长度
+        self.texts = texts
+        self.labels = labels
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        # 返回数据集大小
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        # 获取单个样本：将文本转换为BERT输入格式
+        encoding = self.tokenizer(
+            self.texts[idx],
+            padding='max_length',
+            truncation=True,
+            max_length=self.max_len,
+            return_tensors='pt'
+        )
+
+        return {
+            'input_ids': encoding['input_ids'].squeeze(0),              # 文本的token IDs
+            'attention_mask': encoding['attention_mask'].squeeze(0),    # 注意力掩码
+            'labels': torch.tensor(self.labels[idx], dtype=torch.long)  # 标签
+        }
+
+
+# 5. 定义model、分词器
 tokenizer = BertTokenizer.from_pretrained('models/google-bert/bert-base-chinese')
 model = BertForSequenceClassification.from_pretrained(
     'models/google-bert/bert-base-chinese',
-    num_labels=len(lbl.classes_), # 设置分类标签数量
-    hidden_dropout_prob=0.5,  # 隐藏层 dropout 概率
-    attention_probs_dropout_prob=0.5,  # 注意力机制 dropout 概率
-    classifier_dropout=0.3,  # 添加分类器dropout
+    num_labels=len(lbl.classes_)
+).to(device)
+
+
+# 6. 定义数据加载器
+train_loader = DataLoader(
+    ClassifyDataset(x_train, y_train, tokenizer),
+    batch_size=128, # 每批128个样本
+    shuffle=True    # 训练时打乱数据
 )
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-
-# 定义优化器，使用AdamW，lr是学习率
-optim = torch.optim.AdamW(model.parameters(), lr=2e-5)
-
-# 使用分词器对训练集和测试集的文本进行编码
-# truncation=True：如果文本过长则截断
-# padding=True：对齐所有序列长度，填充到最长
-# max_length=64：最大序列长度
-train_encodings = tokenizer(x_train, truncation=True, padding=True, max_length=64)
-test_encodings = tokenizer(x_test, truncation=True, padding=True, max_length=64)
-
-# 将编码后的数据和标签转换为 Hugging Face `datasets` 库的 Dataset 对象
-train_dataset = Dataset.from_dict({
-    'input_ids': train_encodings['input_ids'],           # 文本的token ID
-    'attention_mask': train_encodings['attention_mask'], # 注意力掩码
-    'labels': train_labels                               # 对应的标签
-})
-test_dataset = Dataset.from_dict({
-    'input_ids': test_encodings['input_ids'],
-    'attention_mask': test_encodings['attention_mask'],
-    'labels': test_labels
-})
-
-
-# 定义用于计算评估指标的函数
-def compute_metrics(eval_pred):
-    # eval_pred 是一个元组，包含模型预测的 logits 和真实的标签
-    logits, labels = eval_pred
-    # 找到 logits 中最大值的索引，即预测的类别
-    predictions = np.argmax(logits, axis=-1)
-    # 计算预测准确率并返回一个字典
-    return {'accuracy': (predictions == labels).mean()}
-
-# 配置训练参数
-training_args = TrainingArguments(
-    output_dir='./results',              # 训练输出目录，用于保存模型和状态
-    num_train_epochs=4,                # 训练的总轮数
-    per_device_train_batch_size=16,      # 训练时每个设备（GPU/CPU）的批次大小
-    per_device_eval_batch_size=16,       # 评估时每个设备的批次大小
-    warmup_steps=100,                    # 学习率预热的步数，有助于稳定训练
-    weight_decay=0.05,                   # 权重衰减，用于防止过拟合
-    logging_dir='./logs',                # 日志存储目录
-    logging_steps=100,                   # 每隔100步记录一次日志
-    eval_strategy="epoch",               # 每训练完一个 epoch 进行一次评估
-    save_strategy="epoch",               # 每训练完一个 epoch 保存一次模型
-    load_best_model_at_end=True,         # 训练结束后加载效果最好的模
-    max_grad_norm=1.0,                   # 梯度裁剪的最大范数
+test_loader = DataLoader(
+    ClassifyDataset(x_test, y_test, tokenizer),
+    batch_size=128,
+    shuffle=False   # 测试时不需要打乱
 )
 
-# 实例化 Trainer
-trainer = Trainer(
-    model=model,                         # 要训练的模型
-    args=training_args,                  # 训练参数
-    train_dataset=train_dataset,         # 训练数据集
-    eval_dataset=test_dataset,           # 评估数据集
-    compute_metrics=compute_metrics,     # 用于计算评估指标的函数
-    optimizers=(optim, None)             # 优化器和学习率调度器
-)
+# 7. 定义优化器
+optimizer = AdamW(model.parameters(), lr=2e-5)
 
-# 深度学习训练过程，数据获取，epoch batch 循环，梯度计算 + 参数更新
 
-# 开始训练模型
-trainer.train()
-# 在测试集上进行最终评估
-trainer.evaluate()
+# 8. 模型训练、验证函数
+def train_epoch(model, dataloader):
+    model.train() # 设置为训练模式
+    total_loss, correct, total = 0, 0, 0
 
-# trainer 是比较简单，适合训练过程比较规范化的模型
-# 如果我要定制化训练过程，trainer无法满足
+    for batch in dataloader:
+        optimizer.zero_grad()   # 清空梯度
+
+        # 前向传播
+        outputs = model(
+            input_ids=batch['input_ids'].to(device),
+            attention_mask=batch['attention_mask'].to(device),
+            labels=batch['labels'].to(device)
+        )
+
+        loss = outputs.loss # 计算损失
+        loss.backward()     # 反向传播
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0) # 梯度裁剪，防止梯度爆炸
+        optimizer.step()   # 更新参数
+
+        # 计算准确率
+        total_loss += loss.item()
+        preds = outputs.logits.argmax(dim=1)    # 获取预测类别索引
+        correct += (preds == batch['labels'].to(device)).sum().item()
+        total += batch['labels'].size(0)
+
+    return total_loss / len(dataloader), correct / total # 平均损失和准确率
+
+
+def evaluate(model, dataloader):
+    model.eval()
+    total_loss, correct, total = 0, 0, 0
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            outputs = model(
+                input_ids=batch['input_ids'].to(device),
+                attention_mask=batch['attention_mask'].to(device),
+                labels=batch['labels'].to(device)
+            )
+
+            total_loss += outputs.loss.item()
+            preds = outputs.logits.argmax(dim=1)
+
+            correct += (preds == batch['labels'].to(device)).sum().item()
+            total += batch['labels'].size(0)
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(batch['labels'].numpy())
+
+    # 类别准确率
+    class_acc = {}
+    for i, cls in enumerate(lbl.classes_):
+        mask = np.array(all_labels) == i
+        if mask.any():
+            class_acc[cls] = (np.array(all_preds)[mask] == i).mean()
+
+    return total_loss / len(dataloader), correct / total, class_acc
+
+# 9. 预测函数
+def predict(text):
+    model.eval()
+    # 对输入文本进行编码
+    encoding = tokenizer(
+        text,
+        padding='max_length',
+        truncation=True,
+        max_length=40,
+        return_tensors='pt'
+    )
+
+    with torch.no_grad():
+        outputs = model(
+            input_ids=encoding['input_ids'].to(device),
+            attention_mask=encoding['attention_mask'].to(device)
+        )
+
+        probs = F.softmax(outputs.logits, dim=1)
+        idx = probs.argmax(dim=1).item()
+
+    return lbl.inverse_transform([idx])[0], probs[0][idx].item()
+
+# 10. 模型训练
+EPOCHS = 5
+for epoch in range(EPOCHS):
+    train_loss, train_acc = train_epoch(model, train_loader)
+    val_loss, val_acc, class_acc = evaluate(model, test_loader)
+
+    print(f"\nEpoch {epoch+1}/{EPOCHS}")
+    print(f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
+    print(f"Val   Loss: {val_loss:.4f} | Val   Acc: {val_acc:.4f}")
+
+    print("类别准确率:")
+    for k, v in class_acc.items():
+        print(f"  {k}: {v:.4f}")
+
+# 保存权重等文件
+SAVE_DIR = "results"
+model.save_pretrained(SAVE_DIR)         # 保存模型权重
+tokenizer.save_pretrained(SAVE_DIR)     # 保存分词器
+
+# 同时保存label encoder
+import pickle
+with open(f"{SAVE_DIR}/label_encoder.pkl", "wb") as f:
+    pickle.dump(lbl, f) # 保存标签编码器
+
+print(f"\n label encoder：`{SAVE_DIR}`")
+
+
+# 示例
+strr = [
+    "今天天气真好，心情特别愉快",
+    "这个消息让我非常震惊",
+    "我对这个结果感到失望",
+    "你想不想去吃午饭？",
+    "哦！我被选中了！",
+    "我身体不舒服，肚子好痛"
+]
+for text in strr:
+    label, conf = predict(text)
+    print(f"\n{text}\n预测: {label} | 置信度: {conf:.2%}")
