@@ -105,7 +105,7 @@ def predict_sentiment(text):
     encoding = tokenizer(
         text,
         truncation=True,
-        padding=True,
+        padding=True, 
         max_length=64,
         return_tensors='pt'  # 返回torch tensor
     )
