@@ -35,50 +35,6 @@
 
 必须在后台运行 elasticsearch.bat 是因为 Elasticsearch 是一个独立的服务（JVM 进程 + HTTP API）, Python 的 elasticsearch 客户端只是一个 HTTP 客户端——它不会自己“启动”数据库进程。 只有服务在运行并监听（默认 http://localhost:9200），Python 客户端才能连接并执行查询/写入。
 
-以下是运行es_测试.py得到的结果:
-```bash
-==================================================
-
---- 正在测试常见的 Elasticsearch 内置分词器 ---
-
-使用分词器：standard
-原始文本: 'Hello, world! This is a test.'
-分词结果: ['hello', 'world', 'this', 'is', 'a', 'test']
-
-使用分词器：simple
-原始文本: 'Hello, world! This is a test.'
-分词结果: ['hello', 'world', 'this', 'is', 'a', 'test']
-
-使用分词器：whitespace
-原始文本: 'Hello, world! This is a test.'
-分词结果: ['Hello,', 'world!', 'This', 'is', 'a', 'test.']
-
-使用分词器：english
-原始文本: 'Hello, world! This is a test.'
-分词结果: ['hello', 'world', 'test']
-
-==================================================
-
---- 正在测试 IK 分词器 ---
-
-使用 IK 分词器：ik_smart
-原始文本: '我在使用Elasticsearch，这是我的测试。'
-分词结果: ['我', '在', '使用', 'elasticsearch', '这是', '我', '的', '测试']
-
-使用 IK 分词器：ik_max_word
-原始文本: '我在使用Elasticsearch，这是我的测试。'
-分词结果: ['我', '在', '使用', 'elasticsearch', '这是', '我', '的', '测试']
-```
-
-
-
-
-
-
-
-
-
-
 
 
 
