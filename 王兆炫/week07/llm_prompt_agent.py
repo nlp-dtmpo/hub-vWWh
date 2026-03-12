@@ -1,4 +1,4 @@
-import openai
+import openai 
 import json
 
 client = openai.OpenAI(
@@ -54,4 +54,5 @@ def parse_text(text: str):
 if __name__ == "__main__":
     text = "从合肥到上海可以到哪坐车？"
     result = parse_text(text)
+
     print(result)
