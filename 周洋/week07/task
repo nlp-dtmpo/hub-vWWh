@@ -1,0 +1,24 @@
+作业1：
+本质：都是 BERT + 下游任务
+两者都使用 BERT 作为 编码器（Encoder）。
+BERT 的作用是把文本转成 上下文语义向量。
+文本分类：对整个句子预测一个标签
+实体识别：实体识别是 序列标注任务。每个 token 都要预测一个标签。
+loss：都是使用CrossEntropyLoss
+loss直接相加有什么问题：
+1️ loss scale 不一致
+2️ token任务梯度更大
+3️ gradient conflict
+4️ negative transfer
+解决方案：
+Loss加权、Uncertainty weighting
+
+作业2：
+角色: 你是⼀个⾼效的 NLU（⾃然语⾔理解）解析专家。你的任务是从⽤户的输⼊中提取“意图”和“槽位（实
+体）”。
+任务: 1. 识别⽤户的意图（如：查询电影、其他）。2、识别并提取槽位实体（如：时间、
+地点、演员名、电影名）。
+Output Format (JSON ONLY): { "intent": "意图名称", "slots": { "实体类型": "实体值" } }
+Examples: ⽤户输⼊: "吴京最近的一部电影是什么" 输出: {"intent": "Query", "slots": {"actor": "吴京",
+"name": "电影"}}
+Current Input: "${⽤户输⼊的⽂本}"
