@@ -1,0 +1,464 @@
+app:
+  description: 意图识别+RAG问答系统，根据用户问题识别意图并路由到不同的知识库
+  icon: 🧠
+  icon_background: '#E6F7FF'
+  mode: workflow
+  name: 意图识别RAG问答系统
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.2.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .PDF
+      - .TXT
+      - .MD
+      - .DOCX
+      allowed_file_types:
+      - document
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: '你好！我是智能问答助手，可以回答机器学习和大模型相关的问题，也可以进行通用对话。请随时提问！'
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 什么是过拟合？
+    - 如何优化Prompt？
+    - 今天天气怎么样？
+    - 什么是Fine-tuning？
+    suggested_questions_after_answer:
+      enabled: true
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: start-to-intent
+      source: '2000000000000001'
+      sourceHandle: source
+      target: '2000000000000002'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: if-else
+      id: intent-to-router
+      source: '2000000000000002'
+      sourceHandle: source
+      target: '2000000000000003'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: router-to-direct
+      source: '2000000000000003'
+      sourceHandle: '1'
+      target: '2000000000000004'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: knowledge-retrieval
+      id: router-to-ml-kb
+      source: '2000000000000003'
+      sourceHandle: '2'
+      target: '2000000000000005'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: knowledge-retrieval
+      id: router-to-llm-kb
+      source: '2000000000000003'
+      sourceHandle: '3'
+      target: '2000000000000006'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: direct-to-answer
+      source: '2000000000000004'
+      sourceHandle: source
+      target: '2000000000000007'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: knowledge-retrieval
+        targetType: llm
+      id: ml-kb-to-answer
+      source: '2000000000000005'
+      sourceHandle: source
+      target: '2000000000000007'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: knowledge-retrieval
+        targetType: llm
+      id: llm-kb-to-answer
+      source: '2000000000000006'
+      sourceHandle: source
+      target: '2000000000000007'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: end
+      id: answer-to-end
+      source: '2000000000000007'
+      sourceHandle: source
+      target: '2000000000000008'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: 开始
+        type: start
+        variables:
+        - label: 用户问题
+          max_length: 2000
+          options: []
+          required: true
+          type: paragraph
+          variable: user_question
+      height: 142
+      id: '2000000000000001'
+      position:
+        x: 80
+        y: 288
+      positionAbsolute:
+        x: 80
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: qwen2.5-72b-instruct
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: intent-system
+          role: system
+          text: "你是一个专业的意图分类器，负责识别用户问题的意图类别。\n\n请将用户问题分类为以下三类之一：\n\n**类别1**：非机器学习/非大模型的通用问题\n- 特征：日常对话、常识问答、编程基础、生活咨询等\n- 不涉及机器学习或大模型技术\n\n**类别2**：机器学习相关问题\n- 特征：涉及机器学习算法、模型训练、数据处理、特征工程等\n- 关键词：训练、模型、算法、预测、分类、回归、聚类、过拟合、欠拟合、神经网络、深度学习、特征工程、模型评估、交叉验证、决策树、随机森林、SVM、XGBoost等\n\n**类别3**：大模型相关问题\n- 特征：涉及GPT、Transformer、Prompt工程、模型微调、RAG等\n- 关键词：GPT、Transformer、Prompt、Fine-tuning、RAG、LoRA、预训练、微调、参数、上下文窗口、token、attention、RLHF、指令微调、对齐、多模态、推理等\n\n**判断规则：**\n1. 如果问题不包含任何机器学习或大模型相关关键词，输出：1\n2. 如果问题包含机器学习关键词但不包含大模型关键词，输出：2\n3. 如果问题包含大模型关键词，输出：3\n\n**重要提醒：**\n- 如果问题同时包含两类关键词，优先输出：3（因为大模型话题通常也涉及机器学习）\n- 只输出数字，不要输出任何其他内容或解释\n- 数字必须精确，不要输出\"类别1\"或\"1.\"这样的格式"
+        - id: intent-user
+          role: user
+          text: '用户问题：{{#2000000000000001.user_question#}}'
+        
+        selected: false
+        structured_output_enabled: false
+        title: 意图识别
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '2000000000000002'
+      position:
+        x: 380
+        y: 288
+      positionAbsolute:
+        x: 380
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        logical_operator: and
+        selected: false
+        title: 路由分发
+        type: if-else
+        conditions:
+        - id: '1'
+          case_id: intent_1
+          comparison_operator: '='
+          variable_selector:
+          - '2000000000000002'
+          - text
+          value: '1'
+        - id: '2'
+          case_id: intent_2
+          comparison_operator: '='
+          variable_selector:
+          - '2000000000000002'
+          - text
+          value: '2'
+        - id: '3'
+          case_id: intent_3
+          comparison_operator: '='
+          variable_selector:
+          - '2000000000000002'
+          - text
+          value: '3'
+      height: 130
+      id: '2000000000000003'
+      position:
+        x: 680
+        y: 288
+      positionAbsolute:
+        x: 680
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: qwen2.5-72b-instruct
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: direct-system
+          role: system
+          text: '你是一个知识渊博的助手，擅长回答各种通用问题。
+
+            请用专业、准确、友好的语言回答用户的问题。
+
+            回答要求：
+            - 准确性：确保答案正确无误
+            - 完整性：提供充分的解释和背景
+            - 友好性：语气亲切自然
+            - 实用性：如果可能，提供具体建议或行动步骤'
+        - id: direct-user
+          role: user
+          text: '用户问题：{{#2000000000000001.user_question#}}'
+        
+        selected: false
+        structured_output_enabled: false
+        title: 直接回答（意图1）
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '2000000000000004'
+      position:
+        x: 980
+        y: 150
+      positionAbsolute:
+        x: 980
+        y: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        selected: false
+        title: 检索ML知识库（意图2）
+        type: knowledge-retrieval
+        context:
+          enabled: false
+          variable_selector: []
+        knowledge_retrieval_parameter:
+          search_mode: single
+          retrieval_model: single
+          top_k: 5
+          score_threshold: 0.6
+        knowledge_ids:
+        - ml_kb_id_12345
+        query_variable_selector:
+        - '2000000000000001'
+        - user_question
+        multiple_retrieval_enabled: false
+      height: 90
+      id: '2000000000000005'
+      position:
+        x: 980
+        y: 288
+      positionAbsolute:
+        x: 980
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        selected: false
+        title: 检索LLM知识库（意图3）
+        type: knowledge-retrieval
+        context:
+          enabled: false
+          variable_selector: []
+        knowledge_retrieval_parameter:
+          search_mode: single
+          retrieval_model: single
+          top_k: 5
+          score_threshold: 0.6
+        knowledge_ids:
+        - llm_kb_id_67890
+        query_variable_selector:
+        - '2000000000000001'
+        - user_question
+        multiple_retrieval_enabled: false
+      height: 90
+      id: '2000000000000006'
+      position:
+        x: 980
+        y: 430
+      positionAbsolute:
+        x: 980
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: qwen2.5-72b-instruct
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: answer-system
+          role: system
+          text: '你是一个专业的知识问答助手，擅长基于参考知识回答用户问题。
+
+            回答要求：
+            - 准确性：主要基于参考知识回答，确保准确性
+            - 完整性：提供充分的解释和背景信息
+            - 实用性：如果可能，提供具体建议或行动步骤
+            - 诚实性：如果参考知识中没有相关信息，请诚实说明
+            
+            格式要求：
+            - 如果有检索结果，使用【参考知识】标签标注来源
+            - 回答结构清晰，分段明确
+            - 使用Markdown格式提升可读性'
+        - id: answer-user
+          role: user
+          text: |
+            用户问题：{{#2000000000000001.user_question#}}
+            
+            参考知识：
+            {{#2000000000000005.text#}}
+            {{#2000000000000006.text#}}
+        
+        selected: false
+        structured_output_enabled: false
+        title: 答案生成
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '2000000000000007'
+      position:
+        x: 1280
+        y: 288
+      positionAbsolute:
+        x: 1280
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - value_selector:
+          - '2000000000000007'
+          - text
+          variable: answer
+        selected: false
+        title: 结束
+        type: end
+      height: 90
+      id: '2000000000000008'
+      position:
+        x: 1580
+        y: 288
+      positionAbsolute:
+        x: 1580
+        y: 288
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.8
