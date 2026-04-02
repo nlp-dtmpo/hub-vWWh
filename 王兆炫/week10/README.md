@@ -5,7 +5,7 @@
 
 2. 使用Qwen-VL解析pdf,这部分实现见 -> [HW2](https://github.com/Birchove/ai_learning/blob/main/%E7%8E%8B%E5%85%86%E7%82%AB/week10/hw2-qwen-convert-pdf.py)
 
-第二部分的实现直接写为了.py文件,所以输出写在这里,可以和 test.pdf 做对比验证
+第二部分的实现直接写为了.py文件,所以输出写在这里,可以和 [test.pdf](https://github.com/Birchove/ai_learning/blob/main/%E7%8E%8B%E5%85%86%E7%82%AB/week10/test.pdf) 做对比验证
 
 可以看到结果还是很理想的
 
