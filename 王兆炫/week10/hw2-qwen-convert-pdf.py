@@ -53,8 +53,7 @@ def extract_pdf_first_page_with_qwenvl(
 
 
 if __name__ == "__main__":
-    # TODO: 填写你的 PDF 文件路径，例如：r"D:\data\demo.pdf"
     pdf_path = "./test.pdf"
 
-    result = extract_pdf_first_page_with_qwenvl(pdf_path=pdf_path, api_key="sk-c646db64531348dcaf748a02d2228474")
+    result = extract_pdf_first_page_with_qwenvl(pdf_path=pdf_path, api_key="你的api-key")
     print(result)
