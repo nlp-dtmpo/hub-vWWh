@@ -1,0 +1,346 @@
+app:
+  description: 体脂健康建议应用，增加年龄输入维度
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: 应用-体脂健康建议
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/tongyi:0.0.26@4f1c4ded3d189719b7dd54e9d4e5b26f724f3632f3dfaa299491b42accc112c8
+kind: app
+version: 0.2.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: code
+      id: 1750247789086-source-1750247864708-target
+      source: '1750247789086'
+      sourceHandle: source
+      target: '1750247864708'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1750247864708-source-1750248183676-target
+      source: '1750247864708'
+      sourceHandle: source
+      target: '1750248183676'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: template-transform
+      id: 1750248183676-source-1750248311782-target
+      source: '1750248183676'
+      sourceHandle: source
+      target: '1750248311782'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: template-transform
+        targetType: end
+      id: 1750248311782-source-1750248397090-target
+      selected: false
+      source: '1750248311782'
+      sourceHandle: source
+      target: '1750248397090'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: ''
+        selected: false
+        title: 开始
+        type: start
+        variables:
+        - label: 性别
+          max_length: 48
+          options:
+          - 男
+          - 女
+          required: true
+          type: select
+          variable: sex
+        - label: 身高（cm）
+          max_length: 48
+          options: []
+          required: true
+          type: number
+          variable: height
+        - label: 体重（kg）
+          max_length: 48
+          options: []
+          required: true
+          type: number
+          variable: weight
+        - label: 年龄
+          max_length: 48
+          options: []
+          required: true
+          type: number
+          variable: age
+      height: 142
+      id: '1750247789086'
+      position:
+        x: 41.261386632606474
+        y: 284.04
+      positionAbsolute:
+        x: 41.261386632606474
+        y: 284.04
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: "def main(sex: str, height: int, weight: int, age: int) -> dict:\n    # 根据性别选择不同的体脂率计算公式\n    if sex.lower() == '男':\n        # 男性体脂率计算公式\n        body_fat_percentage = 1.2 * (weight / (height / 100) ** 2) + 0.23 * 0.45 - 16.2\n    elif sex.lower() == '女':\n        # 女性体脂率计算公式\n        body_fat_percentage = 1.2 * (weight / (height / 100) ** 2) + 0.23 * 0.45 - 5.4\n\n    # 确保体脂率在合理范围内\n    if body_fat_percentage < 0:\n        body_fat_percentage = 0\n    elif body_fat_percentage > 100:\n        body_fat_percentage = 100\n\n    return {\"body_fat_percentage\": round(body_fat_percentage, 2)}\n"
+        code_language: python3
+        desc: ''
+        outputs:
+          body_fat_percentage:
+            children: null
+            type: number
+        selected: false
+        title: 代码执行
+        type: code
+        variables:
+        - value_selector:
+          - '1750247789086'
+          - sex
+          variable: sex
+        - value_selector:
+          - '1750247789086'
+          - height
+          variable: height
+        - value_selector:
+          - '1750247789086'
+          - weight
+          variable: weight
+        - value_selector:
+          - '1750247789086'
+          - age
+          variable: age
+      height: 54
+      id: '1750247864708'
+      position:
+        x: 119.37959695587244
+        y: 442.91994626078304
+      positionAbsolute:
+        x: 119.37959695587244
+        y: 442.91994626078304
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        model:
+          completion_params: {}
+          mode: chat
+          name: qwen2.5-72b-instruct
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: f3024c0a-017c-4519-96d8-a53a4e2a62c5
+          role: system
+          text: "你是专业营养师，请结合用户的体脂率状态给出精准建议。\n\n请参考以下体脂率健康标准来评估用户状态：\n\n男性标准：\n- 18-25岁：优秀6-10%，良好11-14%，一般15-19%，需改善20%+\n- 26-35岁：优秀8-12%，良好13-17%，一般18-22%，需改善23%+\n- 36-45岁：优秀11-15%，良好16-20%，一般21-25%，需改善26%+\n- 46岁以上：优秀13-17%，良好18-22%，一般23-27%，需改善28%+\n\n女性标准：\n- 18-25岁：优秀14-18%，良好19-22%，一般23-28%，需改善29%+\n- 26-35岁：优秀16-20%，良好21-24%，一般25-30%，需改善31%+\n- 36-45岁：优秀18-22%，良好23-26%，一般27-32%，需改善33%+\n- 46岁以上：优秀20-24%，良好25-28%，一般29-34%，需改善35%+\n\n你的建议必须包含以下4个部分，每部分要有具体数据支撑：\n\n1.【当前状态评估】\n- 用户体脂率XX%，属于[年龄段]的[等级]水平\n- 对比该年龄段的理想范围（X%-Y%），差距XX个百分点\n\n2.【核心问题诊断】\n- 该年龄段的主要风险点是什么（肌肉流失/代谢下降/激素变化等）\n- 具体数据支撑（如：40岁后肌肉每年流失1-2%）\n\n3.【量化目标设定】\n- 短期（1-3个月）：体脂率目标XX%，减脂XX kg\n- 中期（3-6个月）：体脂率目标XX%，增肌XX kg\n- 长期（6-12个月）：体脂率目标XX%\n\n4.【具体行动方案】\n- 饮食：每周安排X次XX（如：低碳日2次），具体食谱示例\n- 运动：每周X次XX运动，每次XX分钟，强度控制\n- 监测：每XX周测量一次，关注XX指标\n\n请根据用户的具体情况，给出针对性的量化建议。"
+        - id: f78173fa-6b4e-4f0b-9728-b39614a2d899
+          role: user
+          text: '性别：{{#1750247789086.sex#}}
+
+            身高：{{#1750247789086.height#}}
+
+            体重：{{#1750247789086.weight#}}
+
+            年龄：{{#1750247789086.age#}}
+
+            体脂比：{{#1750247864708.body_fat_percentage#}}'
+        selected: false
+        structured_output_enabled: false
+        title: LLM
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 90
+      id: '1750248183676'
+      position:
+        x: 218
+        y: 520.1696554776656
+      positionAbsolute:
+        x: 218
+        y: 520.1696554776656
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        selected: false
+        template: '## 用户基本信息
+
+
+
+          - 性别 {{ sex }}
+
+
+
+          - 身高 {{ height }}
+
+
+
+          - 体重 {{ weight }}
+
+
+
+          - 年龄 {{ age }}
+
+
+
+          ## 体脂比
+
+
+
+          {{ body_fat_percentage }}
+
+
+
+          ## 健康建议
+
+
+
+          {{ text }}'
+        title: 模板转换
+        type: template-transform
+        variables:
+        - value_selector:
+          - '1750247789086'
+          - height
+          variable: height
+        - value_selector:
+          - '1750247789086'
+          - weight
+          variable: weight
+        - value_selector:
+          - '1750247864708'
+          - body_fat_percentage
+          variable: body_fat_percentage
+        - value_selector:
+          - '1750248183676'
+          - text
+          variable: text
+        - value_selector:
+          - '1750247789086'
+          - sex
+          variable: sex
+        - value_selector:
+          - '1750247789086'
+          - age
+          variable: age
+      height: 54
+      id: '1750248311782'
+      position:
+        x: 361.62340886861296
+        y: 352.1309477828468
+      positionAbsolute:
+        x: 361.62340886861296
+        y: 352.1309477828468
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: ''
+        outputs:
+        - value_selector:
+          - '1750248311782'
+          - output
+          variable: output
+        selected: false
+        title: 结束
+        type: end
+      height: 90
+      id: '1750248397090'
+      position:
+        x: 507
+        y: 431
+      positionAbsolute:
+        x: 507
+        y: 431
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: -6.851848347549549
+      y: -357.2655864694116
+      zoom: 1.4337867223331473
