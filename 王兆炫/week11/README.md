@@ -10,3 +10,10 @@ Task1: 安装openai-agents框架，实现如下的一个程序：
 Task2: 为4-项目案例-企业职能助手，增加3个自定义的tool 工具，实现自定义的功能，并在对话框完成调用
 
 (自然语言 -> 工具选择 ->  工具执行结果)
+
+此处选择的三个工具是-> 
++ query_leave_balance(user_name)：查询年假余额
++ query_payday()：查询发薪日规则
++ create_meeting_summary(topic, notes)：生成会议纪要摘要
+
+选择原则是因为, 这些tools容易通过自然语言触发
