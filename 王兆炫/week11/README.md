@@ -7,9 +7,13 @@ Task1: 安装openai-agents框架，实现如下的一个程序：
 
 此处实现见 [作业一](https://github.com/Birchove/ai_learning/edit/main/%E7%8E%8B%E5%85%86%E7%82%AB/week11/homework1_router.py)
 
+---
+
 Task2: 为4-项目案例-企业职能助手，增加3个自定义的tool 工具，实现自定义的功能，并在对话框完成调用
 
 (自然语言 -> 工具选择 ->  工具执行结果)
+
+此处实现见 [作业二](https://github.com/Birchove/ai_learning/blob/main/%E7%8E%8B%E5%85%86%E7%82%AB/week11/homework2_tools_addition.py)
 
 此处选择的三个工具是-> 
 + query_leave_balance(user_name)：查询年假余额
