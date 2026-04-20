@@ -1,0 +1,53 @@
+from openai import OpenAI
+import os
+from pdf2image import convert_from_path
+import base64
+
+
+client = OpenAI(
+    api_key="sk-433707a211a8417a815c472e8dd0680e",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+)
+
+reasoning_content = ""  # 定义完整思考过程
+answer_content = ""  # 定义完整回复
+is_answering = False  # 判断是否结束思考过程并开始回复
+path = './images/畅联静态消息接口说明2024.pdf'
+
+image_name = 'pdf_1.png'
+# 将 PDF 转为图片
+images = convert_from_path(path, dpi=300, first_page=1, last_page=1)  # dpi 控制清晰度
+if images:
+    output_path = os.path.join('./images', image_name)
+    images[0].save(output_path, 'PNG')
+    print(f"✅ 已保存第一页到: {output_path}")
+else:
+    print("❌ 未能转换 PDF")
+
+base64_image = ""
+with open(f'./images/{image_name}', "rb") as image_file:
+    base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+
+completion = client.chat.completions.create(
+    model="qwen-vl-plus",  # 此处以 qvq-max 为例，可按需更换模型名称
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{base64_image}"
+                    },
+                },
+                {"type": "text", "text": "你是一个图片识别专家，请识别图中内容，其他的请不要回答"},
+            ],
+        },
+    ],
+    # 解除以下注释会在最后一个chunk返回Token使用量
+    # stream_options={
+    #     "include_usage": True
+    # }
+)
+print("\n" + "=" * 20 + "思考过程" + "=" * 20 + "\n")
+print(completion.choices[0].message.content)

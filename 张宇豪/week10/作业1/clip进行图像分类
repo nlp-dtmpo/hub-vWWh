@@ -1,0 +1,47 @@
+import numpy as np
+from PIL import Image
+import requests
+from sklearn.preprocessing import normalize
+from tqdm import tqdm_notebook
+from transformers import ChineseCLIPProcessor, ChineseCLIPModel
+import torch
+import matplotlib.pyplot as plt
+
+model = ChineseCLIPModel.from_pretrained(r'D:\huggingface\models\AI-ModelScope\chinese-clip-vit-base-patch16\AI-ModelScope\chinese-clip-vit-base-patch16')
+processor = ChineseCLIPProcessor.from_pretrained(r'D:\huggingface\models\AI-ModelScope\chinese-clip-vit-base-patch16\AI-ModelScope\chinese-clip-vit-base-patch16')
+
+image_path = r"D:\八斗学院\第10周：多模态大模型\Week10\homework\images.jpg"
+img = [Image.open(image_path)]
+input = processor(images=img, return_tensors='pt')
+img_image_feat = []
+with torch.no_grad():
+    image_feature = model.get_image_features(**input)
+    image_feature = image_feature.data.numpy()
+    img_image_feat.append(image_feature)
+
+img_image_feat = np.vstack(img_image_feat)
+img_image_feat = normalize(img_image_feat)
+
+img_texts_feat = []
+texts = ['小狗', '小猫', '小鸟', '鱼', '树']
+inputs = processor(text=texts, return_tensors='pt', padding=True)
+with torch.no_grad():
+    text_features = model.get_text_features(**inputs)
+    text_features = text_features.data.numpy()
+    img_texts_feat.append(text_features)
+
+img_texts_feat = np.vstack(img_texts_feat)
+img_texts_feat = normalize(img_texts_feat)
+
+print(img_texts_feat.shape)
+
+sim_result = np.dot(img_image_feat[0], img_texts_feat.T)
+sim_idx = sim_result.argsort()[::-1][0]
+
+# 绘图部分
+plt.figure(figsize=(8, 6))
+plt.imshow(Image.open(image_path))
+plt.title(f"识别结果: {texts[sim_idx]}", fontproperties="SimHei") # 使用中文字体防止乱码
+plt.axis('off') # 隐藏坐标轴
+print('文本识别结果：', texts[sim_idx])
+plt.show()
