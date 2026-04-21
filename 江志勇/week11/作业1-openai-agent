@@ -1,0 +1,45 @@
+import os
+os.environ["OPENAI_API_KEY"] = "*****"
+os.environ["OPENAI_BASE_URL"] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+import asyncio
+import uuid
+from openai.types.responses import ResponseContentPartDoneEvent, ResponseTextDeltaEvent
+from agents import Agent, RawResponsesStreamEvent, Runner, TResponseInputItem, trace
+from agents import set_default_openai_api, set_tracing_disabled
+set_default_openai_api("chat_completions")
+set_tracing_disabled(True)
+
+emotion_agent = Agent(
+    name="emotion_agent",
+    model="qwen-max",
+    instructions="你是情感分类专家，擅长情感分类，回答问题时先告诉我你是谁"
+)
+entity_agent = Agent(
+    name="entity_agent",
+    model="qwen-max",
+    instructions="你是实体识别专家，擅长实体识别，回答问题时先告诉我你是谁"
+)
+triage_agent = Agent(
+    name="triage_agent",
+    model="qwen-max",
+    instructions="Handoff to the appropriate agent based on the language of the request.",
+    handoffs=[emotion_agent, entity_agent]
+)
+
+async def main():
+    input1 = input("请输入问题：")
+    result = Runner.run_streamed(triage_agent, input1)
+    # 流式输出
+    async for event in result.stream_events():
+        if not isinstance(event, RawResponsesStreamEvent):
+            continue
+        data = event.data
+        if isinstance(data, ResponseTextDeltaEvent):
+            print(data.delta, end="", flush=True)
+            # yield "content", event.data.delta
+        elif isinstance(data, ResponseContentPartDoneEvent):
+            print("\n")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

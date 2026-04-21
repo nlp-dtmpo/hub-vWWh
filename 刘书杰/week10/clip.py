@@ -1,0 +1,125 @@
+import glob, json, os
+from PIL import Image
+from tqdm import tqdm_notebook
+import numpy as np
+from sklearn.preprocessing import normalize
+import matplotlib.pyplot as plt
+img_paths = glob.glob(r'E:/AI/第10周：多模态大模型(2)/ai_challenger_caption_validation_20170910.json/*.jpg')
+img_paths.sort()
+img_paths = img_paths[:2000]
+validation_annotations = json.load(open('caption_validation_annotations_20170910.json'))
+validation_annotations_dict = {x['image_id']: x['caption'][0] for x in validation_annotations}
+img_paths_basename = [os.path.basename(x) for x in img_paths]
+img_captions = [validation_annotations_dict[x] for x in img_paths_basename]
+
+import requests
+from transformers import ChineseCLIPProcessor, ChineseCLIPModel
+import torch
+model = ChineseCLIPModel.from_pretrained('./model/model')
+processor = ChineseCLIPProcessor.from_pretrained('./model/model')
+
+
+# 微调CLIP模型
+import torch
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.benchmark = True
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data.dataset import Dataset
+
+class CustomDataset(Dataset):
+    def __init__(self, img_paths, img_texts):
+        self.img_paths = img_paths
+        self.img_texts = img_texts
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx])
+        img_input = processor(images=img, return_tensors="pt")
+        text_input = processor(text=self.img_texts[idx], return_tensors="pt", padding='max_length', truncation=True, max_length=25, pad_to_max_length=True)
+        return img_input['pixel_values'], text_input
+
+
+# [:-100]从开头取到倒数100之间的值，[-100:]从倒数100取到末尾
+train_dataset = CustomDataset(img_paths[:-100], img_captions[:-100])
+print(train_dataset[0])
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=20, shuffle=True, num_workers=0, pin_memory=False)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.0005)
+loss_fn = torch.nn.CosineSimilarity()
+batch_idx = 0
+for batch_image, batch_text in train_loader:
+    batch_size, _, text_length = list(batch_text['input_ids'].shape)
+    batch_text = {key: value.reshape(batch_size, text_length) for key, value in batch_text.items()}
+
+    text_features = model.get_text_features(**batch_text)
+    image_features = model.get_image_features(batch_image.reshape(batch_size, 3, 224, 224))
+    image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+    text_features = text_features / text_features.norm(p=2, dim=-1, keepdim=True)
+
+    loss = 1 - loss_fn(text_features, image_features).mean()  # 正样本之间的相似度的loss
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    batch_idx += 1
+    print(loss.item())
+    if batch_idx > 20:
+        break
+
+# img_image_feat = []
+# batch_size = 20
+# for idx in range(len(img_paths) // batch_size + 1):
+#     imgs = [Image.open(path) for path in img_paths[idx*batch_size: (idx+1)*batch_size]]
+#     if len(imgs) == 0:
+#         break
+#     inputs = processor(images=imgs, return_tensors="pt")
+#     with torch.no_grad():
+#         image_features = model.get_image_features(**inputs)
+#         image_features = image_features.data.numpy()
+#         img_image_feat.append(image_features)
+#
+# img_image_feat = np.vstack(img_image_feat)
+# img_image_feat = normalize(img_image_feat)
+#
+# img_texts_feat = []
+# batch_size = 20
+# for idx in range(len(img_captions) // batch_size + 1):
+#     texts = [text for text in img_captions[idx*batch_size: (idx+1)*batch_size]]
+#     if len(texts) == 0:
+#         break
+#     inputs = processor(text=texts, return_tensors='pt', padding=True)
+#     with torch.no_grad():
+#         text_features = model.get_text_features(**inputs)
+#         text_features = text_features.data.numpy()
+#         img_texts_feat.append(text_features)
+# img_texts_feat = np.vstack(img_texts_feat)
+# img_texts_feat = normalize(img_texts_feat)
+#
+# ids = img_image_feat.dot(img_texts_feat.T)
+# result = np.array([x.argmax() for x in ids]) == np.arange(2000)
+# print(result.mean())
+
+# 狗狗图片零样本识别
+img = Image.open('/Users/lookupthesky/Desktop/学习/AI算法学习/直播/第十周/复习/11.jpg')
+inputs = processor(images=img, return_tensors='pt')
+with torch.no_grad():
+    image_feature = model.get_image_features(**inputs)
+    image_feature = image_feature.data.numpy()
+image_feature = normalize(image_feature)
+
+img_caption = ['蛇', '猫', '老鼠', '狮子', '鸡', '狗', '鸭子']
+inputs = processor(text=img_caption, return_tensors="pt", padding=True)
+
+with torch.no_grad():
+    img_captions = model.get_text_features(**inputs)
+    img_captions = img_captions.data.numpy()
+img_captions = normalize(img_captions)
+
+sim_result = np.dot(image_feature, img_captions.T)
+sim_idx = sim_result.argsort()[::-1][0]
+print(sim_idx)
+plt.imshow(Image.open('/Users/lookupthesky/Desktop/学习/AI算法学习/直播/第十周/复习/11.jpg'))
+plt.show()
+print('文本识别结果：', [img_caption[x] for x in sim_idx[:3]])

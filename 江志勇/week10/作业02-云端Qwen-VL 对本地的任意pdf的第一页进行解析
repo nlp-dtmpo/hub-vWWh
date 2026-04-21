@@ -1,0 +1,40 @@
+import fitz
+import pymupdf
+import base64
+from openai import OpenAI
+doc = fitz.open("/Users/lookupthesky/Desktop/学习/AI算法学习/直播/第七周/Week07-信息抽取与GraphRAG.pdf")
+page = doc[16]
+text = page.get_text()
+print(text)
+model = "qwen3-vl-plus"
+client = OpenAI(
+    # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
+    # https://bailian.console.aliyun.com/?tab=model#/api-key
+    api_key="****", # 账号绑定的
+
+    # 大模型厂商的地址
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+image_list = page.get_images(full=True)
+image_list64 = []
+for img_index, img in enumerate(image_list, 1):
+    xref = img[0]
+    base_image = doc.extract_image(xref)
+    image_bytes = base_image["image"]
+    image_ext = base_image["ext"]
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+    image_list64.append(image_base64)
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{image_list64[0]}"}
+            },
+            {"type": "text", "text": "帮我解析文档中的内容."},
+        ],
+    }
+]
+completion = client.chat.completions.create(model=model, messages=messages)
+print(completion.choices[0].message.content)
