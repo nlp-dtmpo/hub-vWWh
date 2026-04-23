@@ -8,7 +8,7 @@
 
 > nl2sql, 即natural language to sql, 核心作用是：让不会写 SQL 的人，也能直接用中文或英文去查询数据库。
 
-此处设计为了真实的agent框架,可以根据用户的提问实时生成SQL,执行SQL,解析SQL结果,其中生成SQL和解析SQL是两次LLM参与的过程,是较为良好的工程实现,具体实现情况见:
+此处设计为了真实的agent框架,可以根据用户的提问, 实时生成SQL, 执行SQL, 解析SQL结果, 其中生成SQL和解析SQL是两次LLM参与的过程, 是较为良好的工程实现, 具体实现情况见:
 [nl2sql](https://github.com/Birchove/ai_learning/blob/main/%E7%8E%8B%E5%85%86%E7%82%AB/week12/nl2sql_agent.md)
 
 
