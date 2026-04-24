@@ -5,7 +5,7 @@ from openai import OpenAI
 # =========================
 # 配置千问
 # =========================
-os.environ["OPENAI_API_KEY"] = "sk-51e0dfbaca164e8ab8abcdbd3c201857"
+os.environ["OPENAI_API_KEY"] = "sk-51e0dfbaca164esab8abcdbd3c201857"
 os.environ["OPENAI_BASE_URL"] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 client = OpenAI(
