@@ -1,0 +1,35 @@
+“”“前端负责界面展示、用户交互、发送API请求
+   后端负责业务逻辑、数据库操作、身份验证、API提供“”“
+“”“openai-agent支持的session存储，通过session_id将历史对话存储到数据库“”“
+class ConversationHistory:
+    def __init__(self, db_path="./assert/conversations.db"):
+        self.db_path = db_path
+        self.session = None
+    
+    def get_history_messages(self, session_id, limit=10):
+        """获取指定会话的历史消息"""
+        from sqlalchemy import create_engine, text
+        
+        engine = create_engine(f'sqlite:///{self.db_path}')
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT role, content, timestamp 
+                    FROM messages 
+                    WHERE session_id = :session_id 
+                    ORDER BY timestamp ASC 
+                    LIMIT :limit
+                """),
+                {"session_id": session_id, "limit": limit}
+            )
+            
+            messages = []
+            for row in result:
+                messages.append({
+                    "role": row[0],  # 'user' 或 'assistant'
+                    "content": row[1],
+                    "timestamp": row[2]
+                })
+            
+            return messages
